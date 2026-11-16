@@ -315,21 +315,47 @@ int runV0rtex() {
         return -420;
     }
     
-    int ret = v0rtex(offsets, &callback, NULL);
-    
-    uint64_t kernel_task_addr = rk64(offsets->kernel_task + kslide);
-    kernprocaddr = rk64(kernel_task_addr + offsets->task_bsd_info);
-    kern_ucred = rk64(kernprocaddr + offsets->proc_ucred);
-    
-    if (ret == 0) {
-        NSLog(@"tfp0: 0x%x", tfp0);
-        NSLog(@"kernel_base: 0x%llx", kernel_base);
-        NSLog(@"kslide: 0x%llx", kslide);
-        NSLog(@"kern_ucred: 0x%llx", kern_ucred);
-        NSLog(@"kernprocaddr: 0x%llx", kernprocaddr);
+    kern_return_t ret = v0rtex(offsets, &callback, NULL);
+
+    // v0rtex must succeed before we use any kernel addresses populated by
+    // its callback. On failure, kslide and the kernel globals may be unset.
+    if (ret != KERN_SUCCESS) {
+        NSLog(@"v0rtex failed; skipping kernel setup (ret=%d)", ret);
+        return ret;
     }
-    
-    return ret;
+
+    // A successful exploit must have supplied a usable kernel task port and
+    // kernel base through callback().
+    if (!MACH_PORT_VALID(tfp0) || kernel_base == 0) {
+        NSLog(@"v0rtex returned success without valid callback state");
+        return KERN_FAILURE;
+    }
+
+    uint64_t kernel_task_addr = rk64(offsets->kernel_task + kslide);
+    if (kernel_task_addr == 0) {
+        NSLog(@"failed to read kernel_task");
+        return KERN_FAILURE;
+    }
+
+    kernprocaddr = rk64(kernel_task_addr + offsets->task_bsd_info);
+    if (kernprocaddr == 0) {
+        NSLog(@"failed to read kernel proc");
+        return KERN_FAILURE;
+    }
+
+    kern_ucred = rk64(kernprocaddr + offsets->proc_ucred);
+    if (kern_ucred == 0) {
+        NSLog(@"failed to read kernel credentials");
+        return KERN_FAILURE;
+    }
+
+    NSLog(@"tfp0: 0x%x", tfp0);
+    NSLog(@"kernel_base: 0x%llx", kernel_base);
+    NSLog(@"kslide: 0x%llx", kslide);
+    NSLog(@"kern_ucred: 0x%llx", kern_ucred);
+    NSLog(@"kernprocaddr: 0x%llx", kernprocaddr);
+
+    return KERN_SUCCESS;
 }
 
 int patchContainermanagerd() {
