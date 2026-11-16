@@ -316,20 +316,44 @@ int runV0rtex() {
     }
     
     int ret = v0rtex(offsets, &callback, NULL);
-    
-    uint64_t kernel_task_addr = rk64(offsets->kernel_task + kslide);
-    kernprocaddr = rk64(kernel_task_addr + offsets->task_bsd_info);
-    kern_ucred = rk64(kernprocaddr + offsets->proc_ucred);
-    
-    if (ret == 0) {
-        NSLog(@"tfp0: 0x%x", tfp0);
-        NSLog(@"kernel_base: 0x%llx", kernel_base);
-        NSLog(@"kslide: 0x%llx", kslide);
-        NSLog(@"kern_ucred: 0x%llx", kern_ucred);
-        NSLog(@"kernprocaddr: 0x%llx", kernprocaddr);
+
+    // Do not touch kernel memory unless v0rtex completed successfully.
+    if (ret != KERN_SUCCESS) {
+        NSLog(@"v0rtex failed; aborting kernel setup (ret=%d)", ret);
+        return ret;
     }
-    
-    return ret;
+
+    // A successful return must also have populated the callback state.
+    if (tfp0 == MACH_PORT_NULL || kernel_base == 0) {
+        NSLog(@"v0rtex returned success without a valid tfp0/kernel base");
+        return -421;
+    }
+
+    uint64_t kernel_task_addr = rk64(offsets->kernel_task + kslide);
+    if (kernel_task_addr == 0) {
+        NSLog(@"failed to read kernel_task");
+        return -422;
+    }
+
+    kernprocaddr = rk64(kernel_task_addr + offsets->task_bsd_info);
+    if (kernprocaddr == 0) {
+        NSLog(@"failed to read kernel proc");
+        return -423;
+    }
+
+    kern_ucred = rk64(kernprocaddr + offsets->proc_ucred);
+    if (kern_ucred == 0) {
+        NSLog(@"failed to read kernel credentials");
+        return -424;
+    }
+
+    NSLog(@"tfp0: 0x%x", tfp0);
+    NSLog(@"kernel_base: 0x%llx", kernel_base);
+    NSLog(@"kslide: 0x%llx", kslide);
+    NSLog(@"kern_ucred: 0x%llx", kern_ucred);
+    NSLog(@"kernprocaddr: 0x%llx", kernprocaddr);
+
+    return KERN_SUCCESS;
 }
 
 int patchContainermanagerd() {
