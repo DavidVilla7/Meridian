@@ -309,6 +309,7 @@ kern_return_t callback(task_t kern_task, kptr_t kbase, void *cb_data) {
 }
 
 int runV0rtex() {
+    // Build deployment is automated from the substrate branch.
     offsets = get_offsets();
     
     if (offsets == NULL) {
