@@ -80,6 +80,14 @@ jobs:
           path.write_text(source.replace(old, new, 1))
           PY
 
+      - name: Select an older Xcode toolchain for iOS 10 compatibility
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
       - name: Build the arm64 JIT payload
         shell: bash
         run: |
