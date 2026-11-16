@@ -12,10 +12,6 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: tns-payload-build
-  cancel-in-progress: false
-
 jobs:
   build:
     runs-on: macos-15
