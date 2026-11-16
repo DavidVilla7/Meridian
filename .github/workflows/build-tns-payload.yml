@@ -88,12 +88,42 @@ jobs:
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
 
+      - name: Add an iOS 10-compatible availability-check runtime shim
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cat > tns/glue/src/availability_compat.m <<'EOF'
+          #import <Foundation/Foundation.h>
+          #include <stdint.h>
+
+          // Xcode's compiler-rt now weak-imports the private
+          // _availability_version_check dyld symbol. That symbol is absent on
+          // older iOS releases, and this target is intentionally back-deployed
+          // to iOS 10. Provide the compiler-rt entry points using the public
+          // NSProcessInfo OS-version API instead.
+          int32_t __isOSVersionAtLeast(int32_t major, int32_t minor, int32_t patch) {
+              NSOperatingSystemVersion current = [[NSProcessInfo processInfo] operatingSystemVersion];
+              if (current.majorVersion != major) return current.majorVersion > major;
+              if (current.minorVersion != minor) return current.minorVersion > minor;
+              return current.patchVersion >= patch;
+          }
+
+          int32_t __isPlatformVersionAtLeast(uint32_t platform, uint32_t major,
+                                             uint32_t minor, uint32_t patch) {
+              // dyld platform value 2 is physical iOS. This payload is built
+              // exclusively for iOS arm64, so other platform IDs are not available.
+              if (platform != 2) return 0;
+              return __isOSVersionAtLeast((int32_t)major, (int32_t)minor,
+                                          (int32_t)patch);
+          }
+          EOF
+
       - name: Build the arm64 JIT payload
         shell: bash
         run: |
           set -euxo pipefail
           xcodebuild -version
-          make -C tns/glue JIT=1
+          make -C tns/glue JIT=1 LDFLAGS='-framework Foundation'
           test -s tns/glue/payload
           file tns/glue/payload
           xcrun --sdk iphoneos lipo -info tns/glue/payload
