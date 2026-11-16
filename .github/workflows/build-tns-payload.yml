@@ -1,0 +1,133 @@
+name: Build and deploy TNS payload
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - substrate
+    paths:
+      - '.github/workflows/build-tns-payload.yml'
+      - 'Meridian/Meridian/jailbreak.m'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tns-payload-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-13
+    steps:
+      - name: Check out this project
+        uses: actions/checkout@v4
+        with:
+          ref: substrate
+          path: project
+
+      - name: Check out the original TNS build system
+        uses: actions/checkout@v4
+        with:
+          repository: JakeBlair420/totally-not-spyware
+          ref: master
+          submodules: recursive
+          path: tns
+
+      - name: Apply the kernel-state guard to the headless Meridian payload
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("tns/glue/dep/Meridian/src/jailbreak.m")
+          source = path.read_text()
+          old = """int makeShitHappen() {
+              int ret = 0;
+
+              uint64_t kernel_task_addr = rk64(offsets->kernel_task + kslide);
+              kernprocaddr = rk64(kernel_task_addr + offsets->task_bsd_info);
+              kern_ucred = rk64(kernprocaddr + offsets->proc_ucred);
+
+              if (ret == 0) {"""
+          new = """int makeShitHappen() {
+              int ret = 0;
+
+              // The TNS entry point must have completed v0rtex and its callback
+              // before post-exploitation touches kernel memory.
+              if (offsets == NULL || tfp0 == MACH_PORT_NULL || kernel_base == 0) {
+                  LOG("kernel setup aborted: missing exploit state");
+                  return 1;
+              }
+
+              uint64_t kernel_task_addr = rk64(offsets->kernel_task + kslide);
+              if (kernel_task_addr == 0) {
+                  LOG("kernel setup aborted: failed to read kernel_task");
+                  return 1;
+              }
+
+              kernprocaddr = rk64(kernel_task_addr + offsets->task_bsd_info);
+              if (kernprocaddr == 0) {
+                  LOG("kernel setup aborted: failed to read kernel proc");
+                  return 1;
+              }
+
+              kern_ucred = rk64(kernprocaddr + offsets->proc_ucred);
+              if (kern_ucred == 0) {
+                  LOG("kernel setup aborted: failed to read kernel credentials");
+                  return 1;
+              }
+
+              if (ret == 0) {"""
+          if old not in source:
+              raise SystemExit("Expected upstream makeShitHappen() prologue not found; refusing to build an unpatched payload.")
+          path.write_text(source.replace(old, new, 1))
+          PY
+
+      - name: Build the arm64 JIT payload
+        shell: bash
+        run: |
+          set -euxo pipefail
+          xcodebuild -version
+          make -C tns/glue JIT=1
+          test -s tns/glue/payload
+          file tns/glue/payload
+          xcrun --sdk iphoneos lipo -info tns/glue/payload
+
+      - name: Check out the Pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: site
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy the rebuilt payload and invalidate the app cache
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euxo pipefail
+          install -m 755 tns/glue/payload site/substrate/payload
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          from datetime import datetime, timezone
+
+          manifest = Path("site/substrate/manifest.appcache")
+          text = manifest.read_text()
+          stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+          text, count = re.subn(r"(?m)^# v.*$", f"# v{stamp}", text, count=1)
+          if count != 1:
+              raise SystemExit("Could not update the appcache version marker.")
+          manifest.write_text(text)
+          PY
+          cd site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add substrate/payload substrate/manifest.appcache
+          if git diff --cached --quiet; then
+            echo "No payload changes to deploy."
+            exit 0
+          fi
+          git commit -m "Deploy rebuilt MeridianFix TNS payload"
+          git push origin gh-pages
