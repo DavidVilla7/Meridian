@@ -1,15 +1,17 @@
-// from https://github.com/joyqi/mobile-device-js
+// Device detection follows the original TNS MeridianFix launcher.
+// MeridianFix web assets are hosted in this repository, so A8/A10 devices
+// are routed to the local build instead of LukeZGD's hosted copy.
 canvas = document.createElement('canvas');
 gl = canvas.getContext('experimental-webgl');
-debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+debugInfo = gl == null ? null : gl.getExtension('WEBGL_debug_renderer_info');
 glRenderer = debugInfo == null ? 'unknown' : gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
 userAgent = window.navigator.userAgent;
 window.onload = function() {
     if (glRenderer.includes("A10") || glRenderer.includes("A8")) {
         if (userAgent.includes("10_3_2") || userAgent.includes("10_3_3")) {
-            window.location.replace('https://lukezgd.github.io/MeridianFix/substrate');
+            window.location.replace('./substrate/');
         } else {
-            window.location.replace('https://lukezgd.github.io/MeridianFix/substitute');
+            window.location.replace('./substitute/');
         }
     } else if (userAgent.includes("like Mac OS X")) {
         if (glRenderer.includes("A9")) {
