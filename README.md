@@ -64,7 +64,6 @@ Testing so far on the target iPod touch 6 has shown:
 - Repeated successful activations when launching the hosted jailbreak through Safari.
 - In the initial recorded Safari sample, 4 of 5 attempts succeeded; one attempt failed with visual corruption followed by a reboot. This is a small, informal sample, not a statistically meaningful success-rate claim.
 - A Home Screen shortcut launch failed in the one recorded attempt, so Safari is currently the preferred launch method.
-- A later clean activation restored access to jailbreak-dependent apps after an earlier test had left the device in a partial/hybrid state. That hybrid-state attempt is excluded from the activation success tally.
 - The device subsequently remained powered on without a spontaneous reboot for more than a day while idle. This is encouraging but is not yet enough to establish long-term stability.
 
 These observations are specific to one device and its current setup. Results may vary with device condition, installed tweaks, bootstrap state and individual activation attempts.
