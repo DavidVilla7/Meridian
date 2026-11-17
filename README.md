@@ -79,7 +79,7 @@ Improved activation reliability does not mean every component in the jailbreak e
 
 This fork uses [LukeZGD's MeridianFix](https://github.com/LukeZGD/MeridianFix) repository as its initial codebase and starting point. **Credit for the MeridianFix base and the work it contains goes to [LukeZGD](https://github.com/LukeZGD).**
 
-Our fork builds on that project with changes specifically targeting the iPod touch 6 (A8) running iOS 10.3.3 after a tethered surrealra1n downgrade. The modifications documented above focus on this device's TNS Substrate path, including defensive kernel-state validation, iOS 10 build compatibility and the automated payload build/deployment workflow.
+This fork builds on that project with changes specifically targeting the iPod touch 6 (A8) running iOS 10.3.3 after a tethered surrealra1n downgrade. The modifications documented above focus on this device's TNS Substrate path, including defensive kernel-state validation, iOS 10 build compatibility and the automated payload build/deployment workflow.
 
 ## Original MeridianFix notes
 
