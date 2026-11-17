@@ -1,6 +1,6 @@
 # MeridianFix - iPod touch 6 / iOS 10.3.3 fork
 
-This fork is focused on improving the **jailbreak activation success rate and post-activation reliability on the iPod touch 6 (iPod7,1 / A8)** after a tethered downgrade to **iOS 10.3.3 using [surrealra1n](https://sep.lol)**.
+This fork is focused on improving the **jailbreak activation success rate and post-activation reliability on the iPod touch 6 (iPod7,1 / A8)** after a tethered downgrade to **iOS 10.3.3 using [surrealra1n](https://github.com/pwnerblu/surrealra1n)**.
 
 The work is device- and firmware-focused. It is not a claim that Meridian's underlying exploit has been replaced or that every iOS 10 device will benefit equally. Changes are being tested on real iPod touch 6 hardware, with the aim of making the existing Meridian/TNS workflow more reliable and safer when an exploit attempt fails.
 
