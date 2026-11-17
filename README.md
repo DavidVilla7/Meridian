@@ -75,11 +75,11 @@ Improved activation reliability does not mean every component in the jailbreak e
 - **Veteris:** newer 4.x versions have crashed during navigation on this device without consistently taking down the wider jailbreak environment. Veteris 3.2.2 with Helper 1.1 is the currently retained working combination.
 - **Long-term stability:** continued idle and normal-use testing is needed before drawing conclusions about spontaneous reboots.
 
-## Upstream background
+## Upstream project and credits
 
-Meridian is an iOS 10 jailbreak for 64-bit devices. MeridianFix combines Meridian builds with an updated bootstrap. This fork retains that foundation and focuses its modifications on the iPod touch 6 / iOS 10.3.3 TNS Substrate path.
+This fork is based on [Meridian](https://github.com/PsychoTea/MeridianJB), the original iOS 10 jailbreak for 64-bit devices created by **Ben Sparkes ([@PsychoTea](https://github.com/PsychoTea))**. Full credit for the original jailbreak and its underlying work belongs to Ben and the contributors acknowledged in the upstream project.
 
-The changes here should be understood as targeted compatibility, defensive kernel-state validation and build-pipeline improvements. They do not constitute a new exploit.
+MeridianFix combines Meridian builds with an updated bootstrap. This fork retains that foundation and focuses its modifications on the iPod touch 6 / iOS 10.3.3 TNS Substrate path. The changes here are targeted compatibility, defensive kernel-state validation and build-pipeline improvements; they do not constitute a new exploit.
 
 ## Original MeridianFix notes
 
