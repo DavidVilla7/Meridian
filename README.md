@@ -64,16 +64,18 @@ Testing so far on the target iPod touch 6 has shown:
 - Repeated successful activations when launching the hosted jailbreak through Safari.
 - In the initial recorded Safari sample, 4 of 5 attempts succeeded; one attempt failed with visual corruption followed by a reboot. This is a small, informal sample, not a statistically meaningful success-rate claim.
 - A Home Screen shortcut launch failed in the one recorded attempt, so Safari is currently the preferred launch method.
-- The device subsequently remained powered on without a spontaneous reboot for more than a day while idle. This is encouraging but is not yet enough to establish long-term stability.
+- The device has now remained powered on for several consecutive days without a single spontaneous reboot during normal use and idle periods. This is a strong positive stability result on the test device, although it does not establish that every configuration or workload is equally stable.
 
 These observations are specific to one device and its current setup. Results may vary with device condition, installed tweaks, bootstrap state and individual activation attempts.
 
 ## Known separate investigations
 
 Improved activation reliability does not mean every component in the jailbreak environment is fixed. The following are being investigated separately:
-- **AppSync Unified:** application installation can still fail signature verification even when AppSync files are present. This may involve package state or injection into `installd`; it is not currently attributed to the Meridian payload changes.
+- **AppSync Unified:** application installation still fails signature verification even when the package appears installed and its files are present. Reinstalling the package and respringing have not restored its functionality. Injection into `installd` remains one possible area to investigate.
+- **Game Player:** the memory-editor tweak no longer opens on the current jailbreak environment.
+- **GameGem:** the tweak opens and its memory search/edit interface appears functional, but changes do not take effect in the target game. This suggests that the visible interface working does not necessarily mean the required process access or memory write operation is succeeding.
+- **Tweak compatibility and injection:** these failures raise a separate concern about tweak loading, process injection or permissions. Their common cause, if any, has not yet been established, and it is not yet known whether the Meridian changes contributed to the regression.
 - **Veteris:** newer 4.x versions have crashed during navigation on this device without consistently taking down the wider jailbreak environment. Veteris 3.2.2 with Helper 1.1 is the currently retained working combination.
-- **Long-term stability:** continued idle and normal-use testing is needed before drawing conclusions about spontaneous reboots.
 
 ## Base project and credits
 
