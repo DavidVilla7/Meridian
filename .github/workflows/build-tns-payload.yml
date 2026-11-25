@@ -80,6 +80,41 @@ jobs:
           path.write_text(source.replace(old, new, 1))
           PY
 
+      - name: Restore Cydia Substrate startup in the headless TNS payload
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("tns/glue/dep/Meridian/src/jailbreak.m")
+          source = path.read_text()
+          anchor = "    // remove Substrate's SafeMode (MobileSafety) if it's installed"
+          insertion = '''    // Start Cydia Substrate in the headless TNS build, matching the
+              // standalone Meridian startup path. Without this, tweak files and
+              // directory links exist but Substrate never loads them.
+              if (TweaksEnabled) {
+                  if (file_exists("/usr/libexec/substrate") != 0) {
+                      LOG("Cydia Substrate is enabled but /usr/libexec/substrate is missing");
+                      return 1;
+                  }
+
+                  LOG("launching Cydia Substrate...");
+                  ret = execprog("/usr/libexec/substrate", NULL);
+                  if (ret != 0) {
+                      LOG("failed to launch Cydia Substrate: %d", ret);
+                      return 1;
+                  }
+                  LOG("Cydia Substrate startup completed");
+              }
+
+              // remove Substrate's SafeMode (MobileSafety) if it's installed'''
+          if source.count(anchor) != 1:
+              raise SystemExit("Expected unique Substrate SafeMode anchor not found; refusing to patch.")
+          if "Start Cydia Substrate in the headless TNS build" in source:
+              raise SystemExit("Substrate startup patch already present; refusing duplicate insertion.")
+          path.write_text(source.replace(anchor, insertion, 1))
+          PY
       - name: Select an older Xcode toolchain for iOS 10 compatibility
         shell: bash
         run: |
