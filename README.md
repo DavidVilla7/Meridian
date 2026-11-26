@@ -25,7 +25,7 @@ The original standalone MeridianFix already checked the return value from `v0rte
 
 Equivalent defensive checks are applied to the headless TNS payload during the build.
 
-**Purpose:** prevent kernel setup from continuing with missing or invalid exploit state after an unsuccessful or incomplete attempt. The change improves the ordering and validation of the failure path; it does not replace or modify the v0rtex exploit itself, and it does not guarantee a higher activation success rate.
+These checks prevent kernel setup from continuing with missing or invalid exploit state after an unsuccessful or incomplete attempt. The change improves the ordering and validation of the failure path; it does not replace or modify the v0rtex exploit itself, and it does not guarantee a higher activation success rate.
 
 ### 2. Restore Cydia Substrate startup in the headless TNS payload
 
@@ -33,7 +33,7 @@ The original standalone Meridian startup path explicitly launches `/usr/libexec/
 
 The build workflow now patches the headless TNS source to launch Cydia Substrate when `TweaksEnabled` is true, check that the executable exists, and stop activation with an error if Substrate fails to start.
 
-**Purpose:** make the hosted TNS activation path start Substrate, rather than merely preparing tweak directories and links. This was a significant functional difference between the standalone and headless TNS paths. After this change, Game Player opened again, and AppSync has also worked immediately after a fresh reboot and jailbreak activation in the latest device test. Those observations are encouraging, although they do not establish that every tweak or injection target will always work.
+With this change, the hosted TNS activation path starts Substrate instead of merely preparing tweak directories and links. This addresses a significant functional difference between the standalone and headless TNS paths. After the change, Game Player opened again, and AppSync also worked immediately after a fresh reboot and jailbreak activation in the latest device test. Those observations are encouraging, although they do not establish that every tweak or injection target will always work.
 
 ### 3. Device-specific TNS payload build
 
@@ -41,7 +41,7 @@ The upstream TNS build system already targets arm64, which is the architecture r
 
 What this repository adds is an automated build of that payload with the device-specific kernel-state checks and Substrate-startup patch applied before compilation, followed by deployment to the hosted page.
 
-**Purpose:** ensure that the hosted page runs the adapted, rebuilt payload rather than an unmodified upstream TNS payload.
+As a result, the hosted page runs the adapted, rebuilt payload rather than an unmodified upstream TNS payload.
 
 ### 4. iOS 10 compatibility shim
 
@@ -49,13 +49,13 @@ The build adds an Objective-C compatibility shim for compiler availability-check
 
 Newer compiler runtimes can reference dyld availability functionality that is not present on older iOS releases. The shim supplies the required version checks for the iOS 10-targeted payload.
 
-**Purpose:** allow the payload to be built with the selected Xcode toolchain while remaining compatible with the older iOS runtime. This addresses build/runtime compatibility, not the jailbreak exploit.
+This lets the payload be built with the selected Xcode toolchain while remaining compatible with the older iOS runtime. It addresses build/runtime compatibility, not the jailbreak exploit.
 
 ### 5. Build only the required libcurl library
 
 The TNS build compiles the libcurl library without also building the unused curl command-line executable.
 
-**Purpose:** avoid an unnecessary target and unrelated linker failures involving macOS Security/SecureTransport symbols.
+Building only the library avoids an unnecessary target and the unrelated linker failures involving macOS Security/SecureTransport symbols.
 
 ### 6. Automated build and deployment workflow
 
@@ -68,7 +68,7 @@ The GitHub Actions workflow:
 - Verifies the payload and deploys it to the `gh-pages` branch.
 - Updates the app-cache version marker so clients fetch the rebuilt payload.
 
-**Purpose:** make the hosted payload reproducible and reduce the risk of testing an outdated cached build.
+The workflow makes the hosted payload reproducible and reduces the risk of testing an outdated cached build.
 
 ## Current build and deployment
 
