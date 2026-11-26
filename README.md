@@ -21,11 +21,11 @@ The starting point for this work is [LukeZGD's MeridianFix repository](https://g
 
 ### 1. Defensive kernel-state validation around v0rtex
 
-The source checks the result of `v0rtex()` before continuing with kernel setup. It validates the expected exploit callback state, including a valid `tfp0` port and non-zero kernel base, and checks subsequent kernel task, process and credential reads.
+The original standalone MeridianFix already checked the return value from `v0rtex()`, but its `runV0rtex()` function attempted the subsequent kernel reads before the caller acted on that return value. This fork moves the success check ahead of those reads. It also validates the exploit callback state, including a valid `tfp0` port and non-zero kernel base, and checks each subsequent kernel task, process and credential read.
 
-The equivalent defensive checks are also applied to the headless TNS payload.
+Equivalent defensive checks are applied to the headless TNS payload during the build.
 
-**Purpose:** prevent the jailbreak from continuing into kernel setup with missing or invalid exploit state after an unsuccessful or incomplete attempt. This is a defensive failure-path and stability improvement. It does not replace or modify the v0rtex exploit itself, and it does not guarantee a higher activation success rate.
+**Purpose:** prevent kernel setup from continuing with missing or invalid exploit state after an unsuccessful or incomplete attempt. The change improves the ordering and validation of the failure path; it does not replace or modify the v0rtex exploit itself, and it does not guarantee a higher activation success rate.
 
 ### 2. Restore Cydia Substrate startup in the headless TNS payload
 
@@ -35,11 +35,13 @@ The build workflow now patches the headless TNS source to launch Cydia Substrate
 
 **Purpose:** make the hosted TNS activation path start Substrate, rather than merely preparing tweak directories and links. This was a significant functional difference between the standalone and headless TNS paths. After this change, Game Player opened again, and AppSync has also worked immediately after a fresh reboot and jailbreak activation in the latest device test. Those observations are encouraging, although they do not establish that every tweak or injection target will always work.
 
-### 3. Custom arm64 TNS payload
+### 3. Device-specific TNS payload build
 
-The hosted page uses an arm64 payload built from the TNS build system, with the device-specific kernel-state checks and Substrate startup patch applied during the build.
+The upstream TNS build system already targets arm64, which is the architecture required by the iPod touch 6. The arm64 architecture itself is therefore not a new contribution of this fork.
 
-**Purpose:** ensure that the hosted page runs the adapted payload rather than an unmodified upstream binary.
+What this repository adds is an automated build of that payload with the device-specific kernel-state checks and Substrate-startup patch applied before compilation, followed by deployment to the hosted page.
+
+**Purpose:** ensure that the hosted page runs the adapted, rebuilt payload rather than an unmodified upstream TNS payload.
 
 ### 4. iOS 10 compatibility shim
 
