@@ -114,14 +114,27 @@ However, this behaviour is not consistently reproducible. On some subsequent boo
 
 The issue has been observed across multiple AppSync versions and builds, so it is not currently attributed to a particular package version. Its underlying cause has not been established. It may involve the interaction between AppSync, `installd` and the jailbreak's injection/startup environment; further evidence is needed before assigning the cause to AppSync or Meridian.
 
+## Building
+
+The hosted payload is built through GitHub Actions. This fork does not use the standalone Xcode project build instructions from the original MeridianFix repository; it builds the headless TNS payload used by the hosted page.
+
+To run the same build in your own copy of this repository:
+
+1. Fork the repository on GitHub, or clone your fork and push it to GitHub.
+2. Make sure GitHub Actions is enabled for the repository.
+3. In **Settings → Actions → General → Workflow permissions**, allow the workflow to read and write repository contents. The workflow uses the repository's `GITHUB_TOKEN` to deploy the rebuilt payload to `gh-pages`.
+4. Open the **Actions** tab and select **Build and deploy TNS payload**.
+5. Select **Run workflow** on the `substrate` branch.
+
+The workflow runs on a macOS 15 Intel runner with Xcode 16. It checks out the upstream [totally-not-spyware TNS build system](https://github.com/JakeBlair420/totally-not-spyware), applies the device-specific kernel-state and Substrate-startup patches, adds the iOS 10 compatibility shim, builds the arm64 JIT payload and required libcurl library, then deploys the result to the `gh-pages` branch.
+
+A successful run updates the hosted payload and its app-cache version marker. The hosted page is then available at https://davidvilla7.github.io/Meridian/ (or the corresponding Pages URL for your own fork, if GitHub Pages is enabled and configured).
+
+The workflow can also run automatically when the build workflow file or the tracked Meridian source path changes on the `substrate` branch. For a manual rebuild without changing those files, use **Run workflow** as described above.
+
 ## Base project and credits
 
 This repository is based on [LukeZGD's MeridianFix](https://github.com/LukeZGD/MeridianFix). Credit for the original MeridianFix project and its underlying work belongs to **[LukeZGD](https://github.com/LukeZGD)**.
 
 The changes in this repository are a narrow adaptation for the iPod touch 6 (A8) running iOS 10.3.3 after a tethered downgrade with surrealra1n. They should not be taken as a general replacement for, or a claim of broader compatibility than, the original project.
 
-## Building
-
-The hosted TNS payload is built by the GitHub Actions workflow at `.github/workflows/build-tns-payload.yml`. The workflow checks out the TNS build system, applies the documented device-specific patches and compatibility shim, builds the arm64 payload, and deploys it to `gh-pages`.
-
-For the original MeridianFix documentation, supported device/firmware combinations and general usage information, refer to [LukeZGD's upstream repository](https://github.com/LukeZGD/MeridianFix).
