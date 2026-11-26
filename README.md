@@ -1,119 +1,125 @@
-# MeridianFix - iPod touch 6 / iOS 10.3.3 fork
+# MeridianFix TNS fork for iPod touch 6 / iOS 10.3.3
 
-This fork is focused on improving the **jailbreak activation success rate and post-activation reliability on the iPod touch 6 (iPod7,1 / A8)** after a tethered downgrade to **iOS 10.3.3 using [surrealra1n](https://github.com/pwnerblu/surrealra1n)**.
-
-The work is device- and firmware-focused. It is not a claim that Meridian's underlying exploit has been replaced or that every iOS 10 device will benefit equally. Changes are being tested on real iPod touch 6 hardware, with the aim of making the existing Meridian/TNS workflow more reliable and safer when an exploit attempt fails.
-
-## What this fork changes
-
-### 1. Safer kernel-state handling after v0rtex
-
-The Meridian source now checks the result of `v0rtex()` before attempting to read kernel addresses. It also verifies that the expected exploit callback state is available, including a valid `tfp0` port and non-zero kernel base, and checks the subsequent kernel task, process and credential reads.
-
-**Why this may help:** a failed or incomplete exploit attempt should no longer continue into kernel setup using unset or invalid addresses. That avoids unsafe follow-on kernel reads and gives the jailbreak a clearer failure path. This is a defensive correctness and stability improvement; it does **not** change the v0rtex exploit itself or guarantee that the exploit will succeed more often.
-
-The same principle is applied to the headless TNS payload: kernel setup is stopped if the expected exploit state or required kernel reads are missing.
-
-### 2. A custom-built arm64 TNS payload for the Substrate build
-
-The hosted TNS version uses a locally built arm64 payload based on the TNS build system, with the kernel-state guard described above applied during the build.
-
-**Why this may help:** it ensures that the hosted TNS page runs the patched payload rather than relying on an unmodified upstream binary. The payload is built specifically for the iOS 10-era arm64 environment used by this project.
-
-### 3. iOS 10 compatibility shim for newer compiler availability checks
-
-The build adds an Objective-C compatibility shim implementing the compiler availability-check entry points using Foundation's `NSProcessInfo` operating-system version API.
-
-Newer compiler runtimes can reference a dyld availability symbol that is not present on older iOS releases. The shim provides the required version checks for this iOS 10-targeted payload.
-
-**Why this may help:** it allows the payload to be built with the selected modern Xcode toolchain while retaining compatibility with the older iOS runtime. It addresses a build/link compatibility problem, not a jailbreak exploit issue.
-
-### 4. Build only the required libcurl library
-
-The TNS build is configured to compile the libcurl library rather than also attempting to build the unused curl command-line executable.
-
-**Why this helps:** the payload needs the library, not the separate command-line tool. Avoiding that unnecessary target sidesteps unrelated linker failures involving macOS Security/SecureTransport symbols.
-
-### 5. Reproducible build and deployment workflow
-
-The GitHub Actions workflow:
-- Uses a macOS 15 Intel runner.
-- Explicitly selects Xcode 16.0.
-- Builds the arm64 JIT payload with the Foundation framework linked.
-- Verifies that the payload exists and is an arm64 Mach-O executable.
-- Deploys the rebuilt payload to the `substrate/` directory on `gh-pages`.
-- Updates the app-cache version marker so clients are prompted to fetch the new payload.
-
-**Why this helps:** it makes the hosted build repeatable and reduces the risk of testing an old cached payload after source changes.
-
-## Target configuration
+This repository is a highly device-specific adaptation of [LukeZGD's MeridianFix](https://github.com/LukeZGD/MeridianFix). It targets one particular setup:
 
 - **Device:** iPod touch 6 (iPod7,1, A8)
 - **Firmware:** iOS 10.3.3
-- **Downgrade method:** surrealra1n (tethered)
-- **Jailbreak path:** MeridianFix TNS, **Substrate build**
-- **Hosted page:** https://davidvilla7.github.io/Meridian/
+- **Downgrade:** tethered downgrade using [surrealra1n](https://github.com/pwnerblu/surrealra1n)
+- **Jailbreak:** MeridianFix TNS, **Cydia Substrate build**
+
+This is not a general-purpose MeridianFix fork, nor is it intended to support other devices, firmware versions, downgrade methods or jailbreak configurations. The changes and observations documented here are specific to the setup above and have been tested on the target iPod touch 6.
+
+The hosted build is available at:
+
+**https://davidvilla7.github.io/Meridian/**
+
+Use the **Substrate** build. This project does not attempt to make the Substitute build or TNS Sockport work on this device.
+
+## Changes from the original MeridianFix
+
+The starting point for this work is [LukeZGD's MeridianFix repository](https://github.com/LukeZGD/MeridianFix). The following changes adapt its TNS Substrate path and build process to the target device and firmware.
+
+### 1. Defensive kernel-state validation around v0rtex
+
+The source checks the result of `v0rtex()` before continuing with kernel setup. It validates the expected exploit callback state, including a valid `tfp0` port and non-zero kernel base, and checks subsequent kernel task, process and credential reads.
+
+The equivalent defensive checks are also applied to the headless TNS payload.
+
+**Purpose:** prevent the jailbreak from continuing into kernel setup with missing or invalid exploit state after an unsuccessful or incomplete attempt. This is a defensive failure-path and stability improvement. It does not replace or modify the v0rtex exploit itself, and it does not guarantee a higher activation success rate.
+
+### 2. Restore Cydia Substrate startup in the headless TNS payload
+
+The original standalone Meridian startup path explicitly launches `/usr/libexec/substrate` when tweaks are enabled. The headless TNS path used by the hosted page did not perform that startup step.
+
+The build workflow now patches the headless TNS source to launch Cydia Substrate when `TweaksEnabled` is true, check that the executable exists, and stop activation with an error if Substrate fails to start.
+
+**Purpose:** make the hosted TNS activation path start Substrate, rather than merely preparing tweak directories and links. This was a significant functional difference between the standalone and headless TNS paths. After this change, Game Player opened again, and AppSync has also worked immediately after a fresh reboot and jailbreak activation in the latest device test. Those observations are encouraging, although they do not establish that every tweak or injection target will always work.
+
+### 3. Custom arm64 TNS payload
+
+The hosted page uses an arm64 payload built from the TNS build system, with the device-specific kernel-state checks and Substrate startup patch applied during the build.
+
+**Purpose:** ensure that the hosted page runs the adapted payload rather than an unmodified upstream binary.
+
+### 4. iOS 10 compatibility shim
+
+The build adds an Objective-C compatibility shim for compiler availability-check entry points, using Foundation's `NSProcessInfo` operating-system version API.
+
+Newer compiler runtimes can reference dyld availability functionality that is not present on older iOS releases. The shim supplies the required version checks for the iOS 10-targeted payload.
+
+**Purpose:** allow the payload to be built with the selected Xcode toolchain while remaining compatible with the older iOS runtime. This addresses build/runtime compatibility, not the jailbreak exploit.
+
+### 5. Build only the required libcurl library
+
+The TNS build compiles the libcurl library without also building the unused curl command-line executable.
+
+**Purpose:** avoid an unnecessary target and unrelated linker failures involving macOS Security/SecureTransport symbols.
+
+### 6. Automated build and deployment workflow
+
+The GitHub Actions workflow:
+
+- Checks out this repository and the upstream TNS build system.
+- Applies the kernel-state guard and Substrate-startup patches to the headless TNS source.
+- Selects the required Xcode toolchain and applies the iOS 10 compatibility shim.
+- Builds the arm64 JIT payload and only the required libcurl library.
+- Verifies the payload and deploys it to the `gh-pages` branch.
+- Updates the app-cache version marker so clients fetch the rebuilt payload.
+
+**Purpose:** make the hosted payload reproducible and reduce the risk of testing an outdated cached build.
+
+## Current build and deployment
+
 - **Source branch:** `substrate`
 - **Deployment branch:** `gh-pages`
+- **Hosted page:** https://davidvilla7.github.io/Meridian/
+- **Build workflow:** `.github/workflows/build-tns-payload.yml`
 
-For this target, use the **Substrate** build. This fork is not intended to make the Substitute build or TNS Sockport work on this device.
+The current hosted build includes the changes described above, including the headless TNS Substrate-startup fix.
 
 ## Device testing and current observations
 
-Testing so far on the target iPod touch 6 has shown:
-- Repeated successful activations when launching the hosted jailbreak through Safari.
-- In the initial recorded Safari sample, 4 of 5 attempts succeeded; one attempt failed with visual corruption followed by a reboot. This is a small, informal sample, not a statistically meaningful success-rate claim.
-- A Home Screen shortcut launch failed in the one recorded attempt, so Safari is currently the preferred launch method.
-- The device has now remained powered on for several consecutive days without a single spontaneous reboot during normal use and idle periods. This is a strong positive stability result on the test device, although it does not establish that every configuration or workload is equally stable.
+Testing is being performed on the specific iPod touch 6 / iOS 10.3.3 / surrealra1n setup described above.
 
-These observations are specific to one device and its current setup. Results may vary with device condition, installed tweaks, bootstrap state and individual activation attempts.
+Current observations:
 
-## Known separate investigations
+- The hosted jailbreak has activated successfully in repeated Safari-based tests. Activation attempts are not perfectly consistent, and the available sample is too small to make a reliable statistical claim about the success rate.
+- The device previously remained powered on for several consecutive days without spontaneous reboots during normal use and idle periods.
+- Safari is the preferred way to launch the hosted jailbreak. A Home Screen shortcut failed in a recorded test.
+- Following the Substrate-startup change, Game Player opened again. The earlier Game Player and GameGem problems are no longer being tracked as known current issues.
+- In the latest clean reboot test, the device was booted through surrealra1n, activated using the hosted build, and an IPA installed successfully through AppSync on the first attempt.
 
-Improved activation reliability does not mean every component in the jailbreak environment is fixed. The following are being investigated separately:
-- **AppSync Unified:** application installation still fails signature verification even when the package appears installed and its files are present. Reinstalling the package and respringing have not restored its functionality. Injection into `installd` remains one possible area to investigate.
-- **Game Player:** the memory-editor tweak no longer opens on the current jailbreak environment.
-- **GameGem:** the tweak opens and its memory search/edit interface appears functional, but changes do not take effect in the target game. This suggests that the visible interface working does not necessarily mean the required process access or memory write operation is succeeding.
-- **Tweak compatibility and injection:** these failures raise a separate concern about tweak loading, process injection or permissions. Their common cause, if any, has not yet been established, and it is not yet known whether the Meridian changes contributed to the regression.
-- **Veteris:** newer 4.x versions have crashed during navigation on this device without consistently taking down the wider jailbreak environment. Veteris 3.2.2 with Helper 1.1 is the currently retained working combination.
+These are observations from one test device and its current configuration, not guarantees for other devices or installations.
+
+## Known issues and limitations
+
+### Veteris
+
+Some Veteris versions have exhibited crashes or other problems in this downgraded and jailbroken environment. The working assumption is that these issues involve the interaction between the iOS 10.3.3 downgraded environment and the jailbreak environment, but the precise cause has not been isolated.
+
+For this setup, the currently preferred combination is **Veteris 3.2.2 with Veteris Helper 1.1**. Using these downgraded versions is recommended over the newer versions that have caused problems during testing.
+
+### AppSync Unified
+
+AppSync behaviour has been inconsistent. At times, after activating the jailbreak, AppSync is installed but IPA installation fails during signature verification. In those cases, the workaround that has restored functionality is:
+
+1. Uninstall AppSync Unified.
+2. Respring.
+3. Install AppSync Unified again.
+4. Respring again.
+
+However, this behaviour is not consistently reproducible. On some subsequent boots and jailbreak activations, AppSync works without being reinstalled. In the latest clean reboot test, AppSync worked on the first IPA installation attempt.
+
+The issue has been observed across multiple AppSync versions and builds, so it is not currently attributed to a particular package version. Its underlying cause has not been established. It may involve the interaction between AppSync, `installd` and the jailbreak's injection/startup environment; further evidence is needed before assigning the cause to AppSync or Meridian.
 
 ## Base project and credits
 
-This fork uses [LukeZGD's MeridianFix](https://github.com/LukeZGD/MeridianFix) repository as its initial codebase and starting point. **Credit for the MeridianFix base and the work it contains goes to [LukeZGD](https://github.com/LukeZGD).**
+This repository is based on [LukeZGD's MeridianFix](https://github.com/LukeZGD/MeridianFix). Credit for the original MeridianFix project and its underlying work belongs to **[LukeZGD](https://github.com/LukeZGD)**.
 
-This fork builds on that project with changes specifically targeting the iPod touch 6 (A8) running iOS 10.3.3 after a tethered surrealra1n downgrade. The modifications documented above focus on this device's TNS Substrate path, including defensive kernel-state validation, iOS 10 build compatibility and the automated payload build/deployment workflow.
-
-## Original MeridianFix notes
-
-- For iOS 10.3.2-10.3.3, use the **substrate** build.
-- The Substrate build is not suitable for iOS versions below 10.3.2; the original project uses the Substitute build for iOS 10.0-10.3.1.
-- Tweak compatibility can vary. A successful jailbreak activation does not guarantee that every tweak or package will work correctly.
-
-## For previously jailbroken devices
-
-If your device was previously jailbroken with Meridian (or other jailbreak tools) and you want to switch to MeridianFix and/or reinstall the bootstrap, the original project documents a cleanup procedure below. **Proceed with caution:** the procedure can bootloop a device. Back up important data and understand the steps before attempting it.
-
-- A "safer" version of the method is to remove `/Applications/Cydia.app`, `/meridian`, and `/var/lib/dpkg` while jailbroken, using Filza, SSH, or another suitable tool.
-- The recommended alternative is to dump blobs using [Legacy iOS Kit](https://github.com/LukeZGD/Legacy-iOS-Kit) and restore using [turdus merula](https://sep.lol).
-
-1. Run [Legacy iOS Kit](https://github.com/LukeZGD/Legacy-iOS-Kit), go to Useful Utilities -> SSH Ramdisk.
-2. Follow the instructions. Once in the SSH Ramdisk, select Connect to SSH.
-3. Run the following commands:
-```sh
-/sbin/mount_apfs /dev/disk0s1s1 /mnt1
-rm -rf /mnt1/Applications/Cydia.app /mnt1/meridian
-sync
-/sbin/umount /mnt1
-sync
-exit
-```
-4. Select Reboot Device.
-5. Once the device reboots, jailbreak with MeridianFix.
-
-On iOS 10.0-10.2.1, the original procedure notes that `mount_apfs` may need to be replaced with `mount_hfs`.
+The changes in this repository are a narrow adaptation for the iPod touch 6 (A8) running iOS 10.3.3 after a tethered downgrade with surrealra1n. They should not be taken as a general replacement for, or a claim of broader compatibility than, the original project.
 
 ## Building
 
-Clone the repository, open the Xcode project, select your device (or a generic target), and make sure `ldid` is in `$PATH`. You will also need `tar`.
+The hosted TNS payload is built by the GitHub Actions workflow at `.github/workflows/build-tns-payload.yml`. The workflow checks out the TNS build system, applies the documented device-specific patches and compatibility shim, builds the arm64 payload, and deploys it to `gh-pages`.
 
-The hosted TNS payload is built by the GitHub Actions workflow at `.github/workflows/build-tns-payload.yml`. It checks out the TNS build system, applies the documented compatibility and kernel-state patches, builds the arm64 payload, and deploys it to `gh-pages`.
+For the original MeridianFix documentation, supported device/firmware combinations and general usage information, refer to [LukeZGD's upstream repository](https://github.com/LukeZGD/MeridianFix).
